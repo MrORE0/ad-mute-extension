@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "Ad Muter",
+  "version": "1.0",
+  "description": "Automatically mutes ads and unmutes regular content",
+  "permissions": [
+    "activeTab",
+    "scripting"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "dist/main.js"
+      ]
+    }
+  ],
+  "background": {
+    "service_worker": "src/background.js",
+    "type": "module"
+  }
+}
