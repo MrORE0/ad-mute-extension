@@ -36,6 +36,7 @@ export function isAdDomain(hostname) {
     "taboola.com",
     "adroll.com",
     "amazon-adsystem.com",
+    "gcdn.2mdn.net"
   ];
   return commonAdDomains.some((domain) => hostname.includes(domain));
 }
