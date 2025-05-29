@@ -1,15 +1,202 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite App</title>
-  </head>
-  <body>
-    <div id="app"></div>
-    <script type="module" src="src/main.js"></script>
-    <h1>AD-Mute</h1>
-    <p>This extension helps with the annoying, loud ads that interupt your watching experience.</p>
-  </body>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {
+      width: 300px;
+      padding: 16px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f5f5f5;
+      margin: 0;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    
+    .title {
+      font-size: 18px;
+      font-weight: bold;
+      color: #333;
+      margin: 0;
+    }
+    
+    .status {
+      background: white;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .status-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid #eee;
+    }
+    
+    .status-item:last-child {
+      border-bottom: none;
+    }
+    
+    .status-label {
+      font-weight: 500;
+      color: #555;
+    }
+    
+    .status-value {
+      font-weight: bold;
+    }
+    
+    .status-active {
+      color: #e74c3c;
+    }
+    
+    .status-inactive {
+      color: #27ae60;
+    }
+    
+    .controls {
+      background: white;
+      border-radius: 8px;
+      padding: 12px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .control-button {
+      width: 100%;
+      padding: 10px;
+      border: none;
+      border-radius: 6px;
+      font-weight: 500;
+      cursor: pointer;
+      margin-bottom: 8px;
+      transition: background-color 0.2s;
+    }
+    
+    .control-button:last-child {
+      margin-bottom: 0;
+    }
+    
+    .unmute-button {
+      background: #27ae60;
+      color: white;
+    }
+    
+    .unmute-button:hover {
+      background: #229954;
+    }
+    
+    .unmute-button:disabled {
+      background: #bdc3c7;
+      cursor: not-allowed;
+    }
+    
+    .info {
+      font-size: 12px;
+      color: #7f8c8d;
+      text-align: center;
+      margin-top: 12px;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1 class="title">Enhanced Ad Muter</h1>
+  </div>
+  
+  <div class="status">
+    <div class="status-item">
+      <span class="status-label">Current Tab:</span>
+      <span class="status-value" id="tabStatus">Checking...</span>
+    </div>
+    <div class="status-item">
+      <span class="status-label">Video Ads Blocked:</span>
+      <span class="status-value" id="videoAdsBlocked">0</span>
+    </div>
+    <div class="status-item">
+      <span class="status-label">Overlay Ads Blocked:</span>
+      <span class="status-value" id="overlayAdsBlocked">0</span>
+    </div>
+    <div class="status-item">
+      <span class="status-label">Tab Muted:</span>
+      <span class="status-value" id="tabMutedStatus">No</span>
+    </div>
+  </div>
+  
+  <div class="controls">
+    <button class="control-button unmute-button" id="unmuteButton">
+      Force Unmute Tab
+    </button>
+  </div>
+  
+  <div class="info">
+    This extension automatically mutes video ads and uses tab-level muting as a fallback when individual video control isn't possible.
+  </div>
+
+  <script>
+    // Get current tab info
+    async function updateStatus() {
+      try {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        
+        const tabStatus = document.getElementById('tabStatus');
+        const tabMutedStatus = document.getElementById('tabMutedStatus');
+        const unmuteButton = document.getElementById('unmuteButton');
+        
+        if (tab.mutedInfo && tab.mutedInfo.muted) {
+          tabStatus.textContent = 'Muted';
+          tabStatus.className = 'status-value status-active';
+          tabMutedStatus.textContent = 'Yes';
+          tabMutedStatus.className = 'status-value status-active';
+          unmuteButton.disabled = false;
+        } else {
+          tabStatus.textContent = 'Normal';
+          tabStatus.className = 'status-value status-inactive';
+          tabMutedStatus.textContent = 'No';
+          tabMutedStatus.className = 'status-value status-inactive';
+          unmuteButton.disabled = true;
+        }
+        
+        // Try to get stats from content script
+        try {
+          const response = await chrome.tabs.sendMessage(tab.id, { type: 'getStats' });
+          if (response) {
+            document.getElementById('videoAdsBlocked').textContent = response.videoAds || 0;
+            document.getElementById('overlayAdsBlocked').textContent = response.overlayAds || 0;
+          }
+        } catch (error) {
+          // Content script might not be loaded yet
+          console.log('Could not get stats from content script');
+        }
+        
+      } catch (error) {
+        console.error('Error updating status:', error);
+        document.getElementById('tabStatus').textContent = 'Error';
+      }
+    }
+    
+    // Force unmute tab
+    document.getElementById('unmuteButton').addEventListener('click', async () => {
+      try {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        await chrome.tabs.update(tab.id, { muted: false });
+        updateStatus();
+      } catch (error) {
+        console.error('Error unmuting tab:', error);
+      }
+    });
+    
+    // Update status on popup open
+    updateStatus();
+    
+    // Update status periodically
+    setInterval(updateStatus, 1000);
+  </script>
+</body>
 </html>

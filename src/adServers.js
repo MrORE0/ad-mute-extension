@@ -36,7 +36,28 @@ export function isAdDomain(hostname) {
     "taboola.com",
     "adroll.com",
     "amazon-adsystem.com",
-    "gcdn.2mdn.net"
+    "gcdn.2mdn.net",
   ];
   return commonAdDomains.some((domain) => hostname.includes(domain));
 }
+
+browserAPI.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.type === "adDetected") {
+    console.log("Ad detected on page:", sender.tab ? sender.tab.url : request.url);
+  }
+
+  // Handle tab muting
+  if (request.type === "muteTab" && sender.tab && sender.tab.id !== undefined) {
+    chrome.tabs.update(sender.tab.id, { muted: true }, () => {
+      sendResponse({ success: true });
+    });
+    return true; // Keep the message channel open for async response
+  }
+
+  if (request.type === "unmuteTab" && sender.tab && sender.tab.id !== undefined) {
+    chrome.tabs.update(sender.tab.id, { muted: false }, () => {
+      sendResponse({ success: true });
+    });
+    return true;
+  }
+});
