@@ -41,23 +41,44 @@ export function isAdDomain(hostname) {
   return commonAdDomains.some((domain) => hostname.includes(domain));
 }
 
-browserAPI.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.type === "adDetected") {
-    console.log("Ad detected on page:", sender.tab ? sender.tab.url : request.url);
+// Enhanced ad detection that checks video sources
+export function isVideoAd(video) {
+  if (!video) return false;
+
+  // Handle canvas elements
+  if (video.tagName === "CANVAS") {
+    const parent = video.closest('[id*="player"], [class*="player"], [id*="video"], [class*="video"]');
+    if (parent && (parent.innerHTML.includes("doubleclick") || parent.innerHTML.includes("googlesyndication"))) {
+      return true;
+    }
+    return false;
   }
 
-  // Handle tab muting
-  if (request.type === "muteTab" && sender.tab && sender.tab.id !== undefined) {
-    chrome.tabs.update(sender.tab.id, { muted: true }, () => {
-      sendResponse({ success: true });
-    });
-    return true; // Keep the message channel open for async response
-  }
+  const videoSrc = video.currentSrc || video.src;
+  if (!videoSrc) return false;
 
-  if (request.type === "unmuteTab" && sender.tab && sender.tab.id !== undefined) {
-    chrome.tabs.update(sender.tab.id, { muted: false }, () => {
-      sendResponse({ success: true });
-    });
-    return true;
+  try {
+    const parser = document.createElement("a");
+    parser.href = videoSrc;
+
+    return isAdDomain(parser.hostname);
+  } catch (error) {
+    console.error("Error parsing video URL:", error);
+    return false;
   }
-});
+}
+
+// Check if an iframe is likely an ad
+export function isAdIframe(iframe) {
+  if (!iframe || !iframe.src) return false;
+
+  try {
+    const parser = document.createElement("a");
+    parser.href = iframe.src;
+
+    return isAdDomain(parser.hostname);
+  } catch (error) {
+    console.error("Error parsing iframe URL:", error);
+    return false;
+  }
+}
