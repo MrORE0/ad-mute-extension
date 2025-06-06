@@ -1,5 +1,5 @@
 import { isVideoAd } from "./adServers.js";
-import { tabMutedByUs, unmuteTab } from "./tabMuting.js";
+import { tabMutedByUs, unmuteTab , muteTab, tabMuteReason} from "./tabMuting.js";
 
 // Track videos and their current sources to detect changes
 export const videoSources = new WeakMap();
@@ -14,6 +14,7 @@ async function handleVideoSourceAd(video, currentSrc) {
     video.muted = true;
     videoStates.set(video, { mutedByUs: true, reason: "video-src-ad" });
     console.log("Successfully muted video player");
+    await muteTab("video-ad-unmutable");
 
     // Send message to background script
     if (typeof chrome !== "undefined" && chrome.runtime) {
@@ -165,7 +166,9 @@ export function setupAdEndListeners(video, wasTabMuted) {
   const handleEnd = async () => {
     console.log("Video source ad ended or changed. Checking mute state.");
 
+    await unmuteTab();
     if (wasTabMuted && tabMutedByUs) {
+      console.log("Trying to unmute tab.")
       // Wait a bit then check if ad is really over
       setTimeout(async () => {
         if (!isVideoAd(video)) {

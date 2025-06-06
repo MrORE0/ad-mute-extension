@@ -1,11 +1,9 @@
-// Cache for ad domains
+
+// Cache for ad domains (if you need it later)
 let adDomainsCache = new Set();
 
-// Check what browser we are on
-let browserAPI = chrome;
-if (typeof browser !== "undefined") {
-  browserAPI = browser;
-}
+// Choose the appropriate API object (chrome or browser)
+let browserAPI = typeof browser !== "undefined" ? browser : chrome;
 
 // Listen for extension installation
 browserAPI.runtime.onInstalled.addListener(() => {
@@ -14,8 +12,9 @@ browserAPI.runtime.onInstalled.addListener(() => {
 
 console.log("Enhanced background is running.");
 
-// Listen for messages from content script
+// Listen for messages from content scripts or popup
 browserAPI.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  //  Handle "adDetected" messages
   if (request.type === "adDetected") {
     const adType = request.adType || "unknown";
     const tabUrl = sender.tab ? sender.tab.url : "unknown";
@@ -23,8 +22,6 @@ browserAPI.runtime.onMessage.addListener((request, sender, sendResponse) => {
     console.log(`${adType} ad detected on page:`, tabUrl);
     console.log("Ad URL:", request.url);
 
-    // You could add additional logging or analytics here
-    // For example, count different types of ads blocked:
     switch (adType) {
       case "video-src":
         console.log("Blocked video source ad");
@@ -39,19 +36,24 @@ browserAPI.runtime.onMessage.addListener((request, sender, sendResponse) => {
         console.log("Blocked unknown ad type");
     }
 
-    // Handle tab muting
-    if (request.type === "muteTab" && sender.tab && sender.tab.id !== undefined) {
-      chrome.tabs.update(sender.tab.id, { muted: true }, () => {
-        sendResponse({ success: true });
-      });
-      return true; // Keep the message channel open for async response
-    }
-
-    if (request.type === "unmuteTab" && sender.tab && sender.tab.id !== undefined) {
-      chrome.tabs.update(sender.tab.id, { muted: false }, () => {
-        sendResponse({ success: true });
-      });
-      return true;
-    }
+    sendResponse({ success: true });
+    return true;
   }
+  if (request.type === "muteTab" && sender.tab && sender.tab.id !== undefined) {
+    browserAPI.tabs.update(sender.tab.id, { muted: true }, () => {
+      sendResponse({ success: true });
+    });
+    return true; // Must return true to indicate sendResponse will be called asynchronously
+  }
+
+  //  Handle "unmuteTab" messages
+  if (request.type === "unmuteTab" && sender.tab && sender.tab.id !== undefined) {
+    browserAPI.tabs.update(sender.tab.id, { muted: false }, () => {
+      sendResponse({ success: true });
+    });
+    return true;
+  }
+
+  // If we get here, it means we didn’t match any of the types above
+  return false;
 });

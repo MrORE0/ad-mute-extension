@@ -10,6 +10,97 @@ export const THROTTLE_DELAY = 300; // Check at most once every 300ms
 // Track videos and their current sources to detect changes
 export const videoListeners = new WeakSet();
 
+// Track JW Player monitoring state
+let jwPlayerMonitoringSetup = false;
+
+// Set up JW Player monitoring
+function setupJWPlayerMonitoring() {
+  if (jwPlayerMonitoringSetup) return;
+  
+  // Only proceed if JW Player is actually available
+  if (typeof window.jwplayer !== "function") return;
+  
+  jwPlayerMonitoringSetup = true;
+  console.log("JW Player detected - setting up monitoring");
+
+  const setupPlayerListeners = (player) => {
+    try {
+      if (typeof player.on !== "function") return;
+
+      // Handle ad events
+      player.on("adImpression", () => {
+        console.log("JW Player ad started");
+        if (!muteJWPlayer(player, "jw-player-ad")) {
+          muteTab("jw-player-ad-unmutable");
+        }
+      });
+
+      player.on("adComplete", () => {
+        console.log("JW Player ad completed");
+        unmuteTab();
+      });
+
+      player.on("adSkipped", () => {
+        console.log("JW Player ad skipped");
+        unmuteTab();
+      });
+
+      // Check for ads when playback starts
+      player.on("play", () => {
+        console.log(player + "is playing. Checking if it's an ad...")
+        if (isJWPlayerAd(player)) {
+          if (!muteJWPlayer(player, "jw-player-ad")) {
+            // try to mute the tab if muting the player was not successful
+            muteTab("jw-player-ad-unmutable");
+          }
+        }
+      });
+
+    } catch (error) {
+      console.log("Error setting up JW Player listeners:", error);
+    }
+  };
+
+  // Set up listeners for existing players
+  const checkExistingPlayers = () => {
+    const players = findJWPlayerInstances();
+    players.forEach(setupPlayerListeners);
+  };
+
+  checkExistingPlayers();
+  
+  // Check for new players periodically for a limited time
+  let checkCount = 0;
+  const maxChecks = 15; // Check for 30 seconds max
+  
+  const playerCheckInterval = setInterval(() => {
+    checkExistingPlayers();
+    checkCount++;
+    
+    if (checkCount >= maxChecks) {
+      clearInterval(playerCheckInterval);
+    }
+  }, 2000);
+
+  // Also check for JW Player loading after initial page load
+  const checkForJWPlayer = () => {
+    if (typeof window.jwplayer === "function" && !window._jwPlayerMonitoringSetup) {
+      window._jwPlayerMonitoringSetup = true;
+      setupJWPlayerMonitoring();
+    }
+  };
+
+  // Check periodically for JW Player to load
+  const jwPlayerCheckInterval = setInterval(() => {
+    checkForJWPlayer();
+
+    // Stop checking after 30 seconds
+    if (Date.now() - window._extensionStartTime > 30000) {
+      clearInterval(jwPlayerCheckInterval);
+    }
+  }, 1000);
+}
+
 // Find videos in shadow DOM
 export function findShadowVideos() {
   const videos = [];
@@ -130,7 +221,6 @@ async function handleCanvasAd(canvas) {
   return false;
 }
 
-
 // Process all video elements including JW Player instances
 export function checkAllVideos() {
   const now = Date.now();
@@ -139,10 +229,13 @@ export function checkAllVideos() {
   if (now - lastCheckTime < THROTTLE_DELAY) return;
   lastCheckTime = now;
 
+  // Set up JW Player monitoring if needed
+  setupJWPlayerMonitoring();
+
   // Get all video elements (including shadow DOM and canvas)
   const videos = findAllVideos();
 
-  // Check JW Player instances
+  // Check JW Player instances first
   const jwPlayers = findJWPlayerInstances();
   jwPlayers.forEach((player) => {
     if (isJWPlayerAd(player)) {
@@ -153,6 +246,7 @@ export function checkAllVideos() {
     }
   });
 
+  // Then check regular videos
   if (videos.length === 0 && jwPlayers.length === 0) return;
 
   for (const video of videos) {
@@ -209,3 +303,4 @@ export function isAd(element) {
 
   return false;
 }
+

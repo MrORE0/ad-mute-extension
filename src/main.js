@@ -1,6 +1,5 @@
 import { fetchAdServersList } from "./adServers.js";
 import { checkAllVideos } from "./helpers.js";
-import { findJWPlayerInstances, isJWPlayerAd, muteJWPlayer } from "./jwhelpers.js";
 import { setupVideoListeners } from "./videoUtils.js";
 import { muteTab } from "./tabMuting.js";
 
@@ -22,67 +21,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
-// JW Player detection function
-function setupJWPlayerMonitoring() {
-  // Check if JW Player is available
-  if (typeof window.jwplayer === "function") {
-    console.log("JW Player detected on page");
-
-    // Monitor JW Player instances
-    const checkJWPlayers = () => {
-      const players = findJWPlayerInstances();
-      players.forEach((player) => {
-        try {
-          // Set up event listeners for ads
-          if (typeof player.on === "function") {
-            player.on("adBlock", () => {
-              console.log("JW Player ad blocked");
-              stats.jwPlayerAds++;
-            });
-
-            player.on("adRequest", () => {
-              console.log("JW Player ad requested");
-            });
-
-            player.on("adImpression", () => {
-              console.log("JW Player ad impression");
-              stats.jwPlayerAds++;
-            });
-          }
-        } catch (error) {
-          console.log("Error setting up JW Player monitoring:", error);
-        }
-      });
-    };
-
-    // Check immediately and then periodically
-    checkJWPlayers();
-    setInterval(checkJWPlayers, 2000);
-  }
-
-  // Also check for JW Player loading after initial page load
-  const checkForJWPlayer = () => {
-    if (typeof window.jwplayer === "function" && !window._jwPlayerMonitoringSetup) {
-      window._jwPlayerMonitoringSetup = true;
-      setupJWPlayerMonitoring();
-    }
-  };
-
-  // Check periodically for JW Player to load
-  const jwPlayerCheckInterval = setInterval(() => {
-    checkForJWPlayer();
-
-    // Stop checking after 30 seconds
-    if (Date.now() - window._extensionStartTime > 30000) {
-      clearInterval(jwPlayerCheckInterval);
-    }
-  }, 1000);
-}
-
 // Enhanced mutation observer that watches for new videos, iframes, JW Player elements, and attribute changes
 const observer = new MutationObserver((mutations) => {
   let shouldCheck = false;
-  let shouldCheckJWPlayer = false;
 
   for (const mutation of mutations) {
     // Check for new nodes
@@ -102,27 +43,14 @@ const observer = new MutationObserver((mutations) => {
             shouldCheck = true;
           }
 
-          // Check for JW Player containers
-          if (node.id && (node.id.includes("jwplayer") || node.id.includes("jw-player"))) {
-            shouldCheckJWPlayer = true;
+          // Check for JW Player containers or scripts
+          if (
+            (node.id && (node.id.includes("jwplayer") || node.id.includes("jw-player"))) ||
+            (node.className && (node.className.toString().includes("jwplayer") || node.className.toString().includes("jw-player"))) ||
+            (node.tagName === "SCRIPT" && node.src && (node.src.includes("jwplayer") || node.src.includes("jw-player")))
+          ) {
             shouldCheck = true;
-          }
-
-          if (node.className && (node.className.toString().includes("jwplayer") || node.className.toString().includes("jw-player"))) {
-            shouldCheckJWPlayer = true;
-            shouldCheck = true;
-          }
-
-          // Check for script tags loading JW Player
-          if (node.tagName === "SCRIPT" && node.src && (node.src.includes("jwplayer") || node.src.includes("jw-player"))) {
-            shouldCheckJWPlayer = true;
-            console.log("JW Player script detected:", node.src);
-
-            // Wait a bit for JW Player to initialize
-            setTimeout(() => {
-              setupJWPlayerMonitoring();
-              checkAllVideos();
-            }, 2000);
+            console.log("JW Player element detected:", node);
           }
         }
       }
@@ -147,7 +75,7 @@ const observer = new MutationObserver((mutations) => {
       shouldCheck = true;
     }
 
-    // Check for attribute changes on canvas elements (might be used for video rendering)
+    // Check for attribute changes on canvas elements
     if (
       mutation.type === "attributes" &&
       mutation.target.tagName === "CANVAS" &&
@@ -165,7 +93,6 @@ const observer = new MutationObserver((mutations) => {
       mutation.target.id &&
       (mutation.target.id.includes("jwplayer") || mutation.target.id.includes("jw-player"))
     ) {
-      shouldCheckJWPlayer = true;
       shouldCheck = true;
     }
 
@@ -175,21 +102,7 @@ const observer = new MutationObserver((mutations) => {
   // Only run the check if we found relevant changes
   if (shouldCheck) {
     // Use requestAnimationFrame to avoid blocking the main thread
-    requestAnimationFrame(() => {
-      // First check JW Player if needed
-      if (shouldCheckJWPlayer) {
-        const jwPlayers = findJWPlayerInstances();
-        jwPlayers.forEach((player) => {
-          if (isJWPlayerAd(player)) {
-            if (!muteJWPlayer(player, "jw-player-ad")) {
-              muteTab("jw-player-ad-unmutable");
-            }
-          }
-        });
-      }
-      // Then check regular videos
-      checkAllVideos();
-    });
+    requestAnimationFrame(checkAllVideos);
   }
 });
 
@@ -207,9 +120,6 @@ async function initialize() {
 
     // Fetch ad servers list
     await fetchAdServersList();
-
-    // Set up JW Player monitoring
-    setupJWPlayerMonitoring();
 
     // Initial check for existing videos
     checkAllVideos();

@@ -5,6 +5,7 @@ export let tabMuteReason = null;
 // Mute entire tab using chrome API
 export async function muteTab(reason = "ad-detected") {
   if (tabMutedByUs) return; // Already muted by us
+  console.log("Muting tab...")
 
   try {
     if (typeof chrome !== "undefined" && chrome.runtime) {
@@ -21,8 +22,9 @@ export async function muteTab(reason = "ad-detected") {
       }
     }
   } catch (error) {
-    console.error("Failed to mute tab:", error);
+    console.error("Error while muting tab", error);
   }
+   console.error("Failed to mute tab:", error);
   return false;
 }
 

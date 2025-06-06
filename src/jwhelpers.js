@@ -1,44 +1,46 @@
 export const jwPlayerInstances = new Map(); // Track JW Player instances
-// JW Player detection and control
+
+// Find JW Player instances (not DOM containers)
 export function findJWPlayerInstances() {
   const instances = [];
   
-  // Method 1: Check for global jwplayer function (since its usually left global)
-  if (typeof window.jwplayer === 'function') {
-    try {
-      // Try to get all player instances if it exists(?.) otherwise its empty[]
-      const players = window.jwplayer.getAllPlayers?.() || [];
-      instances.push(...players); // push all players found
-      
-      // Also try tha  return [...new Set(instances)]; default instance
-      const defaultPlayer = window.jwplayer();
-      // if it exists and it has a container to interact with the DOM add it
-      if (defaultPlayer && defaultPlayer.getContainer) {
-        instances.push(defaultPlayer);
-      }
-    } catch (error) {
-      console.log("Error accessing jwplayer instances:", error);
-    }
+  // Only check if JW Player is actually loaded
+  if (typeof window.jwplayer !== 'function') {
+    return instances;
   }
   
-  // Method 2: Look for JW Player containers in DOM
-  const jwContainers = document.querySelectorAll(
-    '[id*="jwplayer"], [class*="jwplayer"], [id*="jw-player"], [class*="jw-player"]'
-  );
-  
-  jwContainers.forEach(container => {
-    // Try to get player instance from container
-    if (container.id && typeof window.jwplayer === 'function') {
-      try {
-        const player = window.jwplayer(container.id);
-        if (player && player.getContainer) {
-          instances.push(player);
-        }
-      } catch (error) {
-        // Silently continue
-      }
+  try {
+    // Method 1: Get all player instances from JW Player API
+    const players = window.jwplayer.getAllPlayers?.() || [];
+    instances.push(...players);
+    
+    // Method 2: Try default instance
+    const defaultPlayer = window.jwplayer();
+    if (defaultPlayer && defaultPlayer.getContainer && !instances.includes(defaultPlayer)) {
+      instances.push(defaultPlayer);
     }
-  });
+    
+    // Method 3: Check DOM containers only if we have no instances yet
+    if (instances.length === 0) {
+      console.log("No instances found, searching DOM containers...")
+      const jwContainers = document.querySelectorAll('[id*="jwplayer"], [id*="jw-player"]');
+      
+      jwContainers.forEach(container => {
+        if (container.id) {
+          try {
+            const player = window.jwplayer(container.id);
+            if (player && player.getContainer && typeof player.on === 'function') {
+              instances.push(player);
+            }
+          } catch (error) {
+            // Skip invalid containers
+          }
+        }
+      });
+    }
+  } catch (error) {
+    console.log("Error finding JW Player instances:", error);
+  }
   
   return [...new Set(instances)]; // Remove duplicates
 }
@@ -80,56 +82,65 @@ export function isJWPlayerAd(player) {
   try {
     if (!player) return false;
     
-    // Method 1: Check if player has ad-related methods/state
+    // Method 1: Check ad block state
     if (typeof player.getAdBlock === 'function' && player.getAdBlock()) {
       return true;
     }
     
-    // Method 2: Check current item/playlist for ad indicators
+    // Method 2: Check current playlist item for ad domains
     if (typeof player.getPlaylistItem === 'function') {
-      const item = player.getPlaylistItem(); // it return an object with lots of info about the currently displayed video
+      const item = player.getPlaylistItem();
       if (item && item.file) {
         const parser = document.createElement("a");
         parser.href = item.file;
-        console.log('Checking if the item is an ad -> ', item);
-        return isAdDomain(parser.hostname);
+        
+        // Import ad domain check
+        import('./adServers.js').then(({ isAdDomain }) => {
+          if (isAdDomain(parser.hostname)) {
+            console.log('JW Player ad detected via domain:', parser.hostname);
+            return true;
+          }
+        });
       }
     }
     
-    // Method 3: Check advertising state
+    // Method 3: Check advertising configuration
     if (typeof player.getAdvertising === 'function') {
       const adState = player.getAdvertising();
-      if (adState && adState.tag) {// the tag is the href for the ad
-        // skip the add if the button is exposed
-        // TEST: testing to see if it will skip the ad
-        player.on('adTime', (e) => {
-          if (e.position >= adState.skipoffset) {
-            const skipBtn = document.querySelector('.jw-skip');
-            if (skipBtn) {
-              skipBtn.click();
+      if (adState && adState.tag) {
+        console.log('JW Player has ad configuration');
+        
+        // Try to skip ads when possible
+        if (typeof player.on === 'function') {
+          player.on('adTime', (event) => {
+            if (event.position >= (adState.skipoffset || 5)) {
+              const skipBtn = document.querySelector('.jw-skip');
+              if (skipBtn && skipBtn.style.display !== 'none') {
+                console.log('Attempting to skip JW Player ad');
+                skipBtn.click();
+              }
             }
-          }
-        });
+          });
+        }
+        
         return true;
       }
     }
     
-    // Listen for ad events (this sets up listeners for future detection)
-    if (typeof player.on === 'function') {
-      player.on('adBlock', () => {
-        console.log("JW Player ad detected via adBlock event");
-        muteJWPlayer(player, "jw-adblock");
-      });
-      
-      player.on('adComplete', () => {
-        console.log("JW Player ad completed");
-        unmuteJWPlayer(player);
-      });
-      
-      player.on('adSkipped', () => {
-        console.log("JW Player ad skipped");
-        unmuteJWPlayer(player);
-      });
+    // Method 4: Check player state for ad indicators
+    if (typeof player.getState === 'function') {
+      const state = player.getState();
+      // Some JW Players indicate ad state in their status
+      if (state === 'buffering' || state === 'playing') {
+        // Additional check for ad-specific elements in player container
+        const container = player.getContainer();
+        if (container) {
+          const adElements = container.querySelectorAll('.jw-ad, .jw-advertising, [class*="ad-"]');
+          if (adElements.length > 0) {
+            return true;
+          }
+        }
+      }
     }
     
   } catch (error) {
