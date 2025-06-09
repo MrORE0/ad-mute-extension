@@ -1,7 +1,7 @@
 import { isAdDomain, isVideoAd, isAdIframe } from "./adServers.js";
 import { findAllVideos, setupVideoListeners, videoStates, videoSources, setupAdEndListeners, handleRegularContent } from "./videoUtils.js";
 import { muteTab, unmuteTab, tabMutedByUs, tabMuteReason } from "./tabMuting.js";
-import { findJWPlayerInstances, isJWPlayerAd } from "./jwhelpers.js";
+import { findJWPlayerInstances, isJWPlayerAd  } from "./jwhelpers.js";
 
 // Performance optimization: Use a throttled function for checking
 export let lastCheckTime = 0;
@@ -30,7 +30,7 @@ function setupJWPlayerMonitoring() {
       // Handle ad events
       player.on("adImpression", () => {
         console.log("JW Player ad started");
-         muteTab("jw-player-ad-unmutable");
+         muteTab("jw-player-is-ad");
       });
 
       player.on("adComplete", () => {
@@ -46,10 +46,7 @@ function setupJWPlayerMonitoring() {
       // Check for ads when playback starts
       player.on("play", () => {
         console.log(player + "is playing. Checking if it's an ad...")
-        if (isJWPlayerAd(player)) {
-            muteTab("jw-player-ad-unmutable");
-          }
-        }
+          muteTab("jw-player-is-ad");
       });
 
     } catch (error) {
@@ -194,7 +191,10 @@ export function checkAllVideos() {
   const jwPlayers = findJWPlayerInstances();
   jwPlayers.forEach((player) => {
     if (isJWPlayerAd(player)) {
+      if (!muteJWPlayer(player, "jw-player-ad")) {
+        // If we can't mute the JW Player, fall back to tab muting
         muteTab("jw-player-ad-unmutable");
+      }
     }
   });
 
