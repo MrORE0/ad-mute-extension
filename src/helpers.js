@@ -1,7 +1,7 @@
 import { isAdDomain, isVideoAd, isAdIframe } from "./adServers.js";
-import { findAllVideos, setupVideoListeners, videoStates, videoSources, setupAdEndListeners, handleRegularContent } from "./videoUtils.js";
+import { findAllVideos, setupVideoListeners, videoStates, videoSources, setupAdEndListeners } from "./videoUtils.js";
 import { muteTab, unmuteTab, tabMutedByUs, tabMuteReason } from "./tabMuting.js";
-import { findJWPlayerInstances, isJWPlayerAd, muteJWPlayer } from "./jwhelpers.js";
+import { findJWPlayerInstances, isJWPlayerAd  } from "./jwhelpers.js";
 
 // Performance optimization: Use a throttled function for checking
 export let lastCheckTime = 0;
@@ -30,9 +30,7 @@ function setupJWPlayerMonitoring() {
       // Handle ad events
       player.on("adImpression", () => {
         console.log("JW Player ad started");
-        if (!muteJWPlayer(player, "jw-player-ad")) {
-          muteTab("jw-player-ad-unmutable");
-        }
+         muteTab("jw-player-is-ad");
       });
 
       player.on("adComplete", () => {
@@ -48,12 +46,7 @@ function setupJWPlayerMonitoring() {
       // Check for ads when playback starts
       player.on("play", () => {
         console.log(player + "is playing. Checking if it's an ad...")
-        if (isJWPlayerAd(player)) {
-          if (!muteJWPlayer(player, "jw-player-ad")) {
-            // try to mute the tab if muting the player was not successful
-            muteTab("jw-player-ad-unmutable");
-          }
-        }
+          muteTab("jw-player-is-ad");
       });
 
     } catch (error) {
@@ -99,37 +92,6 @@ function setupJWPlayerMonitoring() {
       clearInterval(jwPlayerCheckInterval);
     }
   }, 1000);
-}
-
-// Find videos in shadow DOM
-export function findShadowVideos() {
-  const videos = [];
-
-  function traverseShadowRoots(element) {
-    // Check current element
-    if (element.tagName === "VIDEO") {
-      videos.push(element);
-    }
-
-    // Check for shadow root
-    if (element.shadowRoot) {
-      const shadowVideos = element.shadowRoot.querySelectorAll("video");
-      videos.push(...shadowVideos);
-
-      // Recursively check shadow roots within shadow roots
-      const shadowElements = element.shadowRoot.querySelectorAll("*");
-      shadowElements.forEach(traverseShadowRoots);
-    }
-
-    // Check regular children
-    const children = element.children;
-    for (let i = 0; i < children.length; i++) {
-      traverseShadowRoots(children[i]);
-    }
-  }
-
-  traverseShadowRoots(document.documentElement);
-  return videos;
 }
 
 // Find iframes that are positioned over videos (overlay ads)
@@ -211,16 +173,6 @@ export function waitForSourceChange(video, callback) {
   });
 }
 
-// Handle canvas-based video ads
-async function handleCanvasAd(canvas) {
-  if (isVideoAd(canvas)) {
-    console.log("Canvas-based ad detected, using tab muting");
-    await muteTab("canvas-ad");
-    return true;
-  }
-  return false;
-}
-
 // Process all video elements including JW Player instances
 export function checkAllVideos() {
   const now = Date.now();
@@ -239,10 +191,7 @@ export function checkAllVideos() {
   const jwPlayers = findJWPlayerInstances();
   jwPlayers.forEach((player) => {
     if (isJWPlayerAd(player)) {
-      if (!muteJWPlayer(player, "jw-player-ad")) {
-        // If we can't mute the JW Player, fall back to tab muting
         muteTab("jw-player-ad-unmutable");
-      }
     }
   });
 
@@ -254,53 +203,4 @@ export function checkAllVideos() {
   }
 }
 
-// Enhanced function to check if an element is likely an ad
-export function isAd(element) {
-  if (element.tagName === "VIDEO" && element.src) {
-    const parser = document.createElement("a");
-    parser.href = element.src;
-    if (isAdDomain(parser.hostname)) {
-      return true;
-    }
-  }
-
-  if (element.tagName === "IFRAME" && element.src) {
-    return isAdIframe(element);
-  }
-
-  const adIndicators = [
-    "advertisement",
-    "advert",
-    "ad-container",
-    "ad-wrapper",
-    "ad-unit",
-    "ad-slot",
-    "ad-banner",
-    "ad-overlay",
-    "ad-popup",
-    "advertisement-container",
-    "advertisement-wrapper",
-    "advertisement-unit",
-    "advertisement-slot",
-    "advertisement-banner",
-    "advertisement-overlay",
-    "advertisement-popup",
-  ];
-
-  const classNames = element.className.toString().toLowerCase();
-  if (adIndicators.some((indicator) => classNames.includes(indicator))) {
-    return true;
-  }
-
-  if (
-    element.hasAttribute("data-ad") ||
-    element.hasAttribute("data-advertisement") ||
-    element.hasAttribute("data-ad-unit") ||
-    element.hasAttribute("data-ad-overlay")
-  ) {
-    return true;
-  }
-
-  return false;
-}
 

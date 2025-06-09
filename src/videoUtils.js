@@ -1,6 +1,7 @@
 import { isVideoAd } from "./adServers.js";
 import { tabMutedByUs, unmuteTab , muteTab, tabMuteReason} from "./tabMuting.js";
 
+
 // Track videos and their current sources to detect changes
 export const videoSources = new WeakMap();
 export const videoListeners = new WeakSet();
@@ -8,13 +9,16 @@ export const videoStates = new WeakMap(); // Track if video was muted by us
 
 // Handle video source ads
 async function handleVideoSourceAd(video, currentSrc) {
-  console.log("Video source ad detected. Attempting to mute video player:", currentSrc);
+  console.log("Attempting to mute tab. Video source ad detected: ", currentSrc);
 
   try {
     video.muted = true;
     videoStates.set(video, { mutedByUs: true, reason: "video-src-ad" });
-    console.log("Successfully muted video player");
-    await muteTab("video-ad-unmutable");
+    if(await muteTab("video-is-ad")){
+      console.log("Successfully muted tab.");
+    }else{
+      console.log("Unsuccessfully muted tab.");
+    }
 
     // Send message to background script
     if (typeof chrome !== "undefined" && chrome.runtime) {
@@ -29,8 +33,8 @@ async function handleVideoSourceAd(video, currentSrc) {
     setupAdEndListeners(video, false);
     return true;
   } catch (error) {
-    console.log("Failed to mute video player, will try tab muting:", error);
-
+    console.log("Failed to mute tab", error);
+    
     // Send message with fallback flag
     if (typeof chrome !== "undefined" && chrome.runtime) {
       chrome.runtime.sendMessage({
@@ -40,32 +44,17 @@ async function handleVideoSourceAd(video, currentSrc) {
         fallbackToTabMute: true,
       });
     }
-
-    // Try tab muting as fallback
-    const tabMuted = await muteTab("video-ad-unmutable");
-    if (tabMuted) {
-      setupAdEndListeners(video, true);
-      return true;
-    }
-  }
-
   return false;
-}
+}}
 
-// Handle regular content (non-ad)
-export async function handleRegularContent(video) {
-  // This is regular content, ensure it's not muted by our extension
-  const state = videoStates.get(video);
-  if (video.muted && state?.mutedByUs && state?.reason === "video-src-ad") {
-    console.log("Regular content detected. Unmuting video player.");
-    video.muted = false;
-    videoStates.set(video, { mutedByUs: false });
+// Handle canvas-based video ads
+async function handleCanvasAd(canvas) {
+  if (isVideoAd(canvas)) {
+    console.log("Canvas-based ad detected, using tab muting");
+    await muteTab("canvas-ad");
+    return true;
   }
-
-  // If tab was muted due to video ads, unmute it
-  if (tabMutedByUs && tabMuteReason === "video-ad-unmutable") {
-    await unmuteTab();
-  }
+  return false;
 }
 
 // Main function to check video source
@@ -87,9 +76,8 @@ export async function checkVideoSource(video) {
 
     if (currentSrc && isVideoAd(video)) {
       await handleVideoSourceAd(video, currentSrc);
-    } else if (currentSrc && !isVideoAd(video)) {
-      await handleRegularContent(video);
     }
+    
   }
 }
 
@@ -164,23 +152,18 @@ export function waitForSourceChange(video, callback) {
 // Setup listeners for when ads end
 export function setupAdEndListeners(video, wasTabMuted) {
   const handleEnd = async () => {
-    console.log("Video source ad ended or changed. Checking mute state.");
+    console.log("Ad ended or changed. Checking mute state...", wasTabMuted, tabMutedByUs);
 
-    await unmuteTab();
     if (wasTabMuted && tabMutedByUs) {
-      console.log("Trying to unmute tab.")
-      // Wait a bit then check if ad is really over
-      setTimeout(async () => {
-        if (!isVideoAd(video)) {
-          await unmuteTab();
-        }
-      }, 1000);
+      console.log("Unmuting tab.")
+      await unmuteTab();
     } else {
       waitForSourceChange(video, () => {
+        console.log("Waiting for source change.")
         if (videoStates.get(video)?.mutedByUs) {
           video.muted = false;
           videoStates.set(video, { mutedByUs: false });
-          console.log("Unmuting video after video source ad ended.");
+          console.log("Unmuting video after ad ended.");
         }
       });
     }
