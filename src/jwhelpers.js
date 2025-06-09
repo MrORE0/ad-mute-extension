@@ -45,38 +45,6 @@ export function findJWPlayerInstances() {
   return [...new Set(instances)]; // Remove duplicates
 }
 
-// Control JW Player volume
-export function muteJWPlayer(player, reason = "ad-detected") {
-  try {
-    if (player && typeof player.setMute === 'function') {
-      player.setMute(true);
-      jwPlayerInstances.set(player, { mutedByUs: true, reason });
-      console.log(`JW Player muted due to: ${reason}`);
-      return true;
-    }
-  } catch (error) {
-    console.error("Failed to mute JW Player:", error);
-  }
-  return false;
-}
-
-export function unmuteJWPlayer(player) {
-  try {
-    if (player && typeof player.setMute === 'function') {
-      const state = jwPlayerInstances.get(player);
-      if (state?.mutedByUs) {
-        player.setMute(false);
-        jwPlayerInstances.set(player, { mutedByUs: false });
-        console.log("JW Player unmuted");
-        return true;
-      }
-    }
-  } catch (error) {
-    console.error("Failed to unmute JW Player:", error);
-  }
-  return false;
-}
-
 // Check if JW Player is playing an ad
 export function isJWPlayerAd(player) {
   try {

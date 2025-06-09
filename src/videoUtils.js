@@ -1,6 +1,7 @@
 import { isVideoAd } from "./adServers.js";
 import { tabMutedByUs, unmuteTab , muteTab, tabMuteReason} from "./tabMuting.js";
 
+
 // Track videos and their current sources to detect changes
 export const videoSources = new WeakMap();
 export const videoListeners = new WeakSet();
@@ -66,6 +67,16 @@ export async function handleRegularContent(video) {
   if (tabMutedByUs && tabMuteReason === "video-ad-unmutable") {
     await unmuteTab();
   }
+}
+
+// Handle canvas-based video ads
+async function handleCanvasAd(canvas) {
+  if (isVideoAd(canvas)) {
+    console.log("Canvas-based ad detected, using tab muting");
+    await muteTab("canvas-ad");
+    return true;
+  }
+  return false;
 }
 
 // Main function to check video source
