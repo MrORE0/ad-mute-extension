@@ -45,15 +45,7 @@ async function handleVideoSourceAd(video, currentSrc) {
       });
     }
   return false;
-}
-
-// Handle regular content (non-ad)
-export async function handleRegularContent(video) {
-  // If tab was muted due to video ads, unmute it
-  if (tabMutedByUs && tabMuteReason === "video-is-ad") {
-    await unmuteTab();
-  }
-}
+}}
 
 // Handle canvas-based video ads
 async function handleCanvasAd(canvas) {
@@ -84,9 +76,8 @@ export async function checkVideoSource(video) {
 
     if (currentSrc && isVideoAd(video)) {
       await handleVideoSourceAd(video, currentSrc);
-    } else if (currentSrc && !isVideoAd(video)) {
-      await handleRegularContent(video);
     }
+    
   }
 }
 
@@ -161,7 +152,7 @@ export function waitForSourceChange(video, callback) {
 // Setup listeners for when ads end
 export function setupAdEndListeners(video, wasTabMuted) {
   const handleEnd = async () => {
-    console.log("Ad ended or changed. Checking mute state.");
+    console.log("Ad ended or changed. Checking mute state...", wasTabMuted, tabMutedByUs);
 
     if (wasTabMuted && tabMutedByUs) {
       console.log("Unmuting tab.")

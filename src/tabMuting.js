@@ -28,7 +28,6 @@ export async function muteTab(reason = "ad-detected") {
   } catch (error) {
     console.error("Error while muting tab", error);
   }
-   console.error("Failed to mute tab:", error);
   return false;
 }
 

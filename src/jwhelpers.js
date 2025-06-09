@@ -1,3 +1,4 @@
+import { isAdDomain } from './adServers.js';
 export const jwPlayerInstances = new Map(); // Track JW Player instances
 
 // Find JW Player instances (not DOM containers)
@@ -63,12 +64,10 @@ export function isJWPlayerAd(player) {
         parser.href = item.file;
         
         // Import ad domain check
-        import('./adServers.js').then(({ isAdDomain }) => {
           if (isAdDomain(parser.hostname)) {
             console.log('JW Player ad detected via domain:', parser.hostname);
             return true;
           }
-        });
       }
     }
     
