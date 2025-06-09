@@ -14,7 +14,9 @@ async function handleVideoSourceAd(video, currentSrc) {
   try {
     video.muted = true;
     videoStates.set(video, { mutedByUs: true, reason: "video-src-ad" });
-    if(await muteTab("video-is-ad")){
+    const tabMuted = await muteTab("video-is-ad");
+    
+    if(tabMuted){
       console.log("Successfully muted tab.");
     }else{
       console.log("Unsuccessfully muted tab.");
@@ -29,8 +31,8 @@ async function handleVideoSourceAd(video, currentSrc) {
       });
     }
 
-    // Listen for the ad to end
-    setupAdEndListeners(video, false);
+    // Listen for the ad to end - pass the actual tab mute status
+    setupAdEndListeners(video, tabMuted);
     return true;
   } catch (error) {
     console.log("Failed to mute tab", error);
@@ -44,8 +46,9 @@ async function handleVideoSourceAd(video, currentSrc) {
         fallbackToTabMute: true,
       });
     }
-  return false;
-}}
+    return false;
+  }
+}
 
 // Handle canvas-based video ads
 async function handleCanvasAd(canvas) {
