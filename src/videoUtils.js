@@ -1,6 +1,5 @@
 import { isVideoAd } from "./adServers.js";
-import { tabMutedByUs, unmuteTab , muteTab, tabMuteReason} from "./tabMuting.js";
-
+import { tabMutedByUs, unmuteTab, muteTab, tabMuteReason } from "./tabMuting.js";
 
 // Track videos and their current sources to detect changes
 export const videoSources = new WeakMap();
@@ -15,10 +14,10 @@ async function handleVideoSourceAd(video, currentSrc) {
     video.muted = true;
     videoStates.set(video, { mutedByUs: true, reason: "video-src-ad" });
     const tabMuted = await muteTab("video-is-ad");
-    
-    if(tabMuted){
+
+    if (tabMuted) {
       console.log("Successfully muted tab.");
-    }else{
+    } else {
       console.log("Unsuccessfully muted tab.");
     }
 
@@ -36,7 +35,7 @@ async function handleVideoSourceAd(video, currentSrc) {
     return true;
   } catch (error) {
     console.log("Failed to mute tab", error);
-    
+
     // Send message with fallback flag
     if (typeof chrome !== "undefined" && chrome.runtime) {
       chrome.runtime.sendMessage({
@@ -80,7 +79,6 @@ export async function checkVideoSource(video) {
     if (currentSrc && isVideoAd(video)) {
       await handleVideoSourceAd(video, currentSrc);
     }
-    
   }
 }
 
@@ -115,15 +113,48 @@ export function findShadowVideos() {
   return videos;
 }
 
+function isSideContent(element){
+  const sideIndicators = [
+    'sidebar', 'aside', 'nav', 'navigation', 'menu',
+    'header', 'footer', 'advertisement', 'ad-',
+    'social', 'share', 'comment', 'related',
+    'widget', 'banner', 'promo'
+  ];
+
+  const className = element.className?.toString().toLowerCase() || '';
+  const id = element.id?.toLowerCase() || '';
+  const tagName = element.tagName.toLowerCase();
+
+  // Check for semantic HTML5 elements
+  if (['aside', 'nav', 'header', 'footer'].includes(tagName)) {
+    return true;
+  }
+
+  // Check class names and IDs
+  return sideIndicators.some(indicator => 
+    className.includes(indicator) || id.includes(indicator)
+  );
+}
+
+function filterVideos(videos){
+  const videoArray = Array.from(videos);
+  const filterArray = [];
+
+  videoArray.forEach(video => {
+    if(!isSideContent(video)) filterArray.push(video);
+  });
+  return filterArray;
+}
+
 // Enhanced video detection that includes shadow DOM and canvas
 export function findAllVideos() {
   const videos = [];
 
   // Standard video elements
-  videos.push(...document.getElementsByTagName("video"));
+  videos.push(...filterVideos(document.getElementsByTagName("video")));
 
   // Videos in shadow DOM
-  videos.push(...findShadowVideos());
+  videos.push(...filterVideos(findShadowVideos()));
 
   // Check for canvas elements that might be rendering video
   const canvases = document.getElementsByTagName("canvas");
@@ -136,6 +167,8 @@ export function findAllVideos() {
       videos.push(canvas);
     }
   }
+
+  console.log("Amount of videos found: ", videos);
   return videos;
 }
 
@@ -158,11 +191,11 @@ export function setupAdEndListeners(video, wasTabMuted) {
     console.log("Ad ended or changed. Checking mute state...", wasTabMuted, tabMutedByUs);
 
     if (wasTabMuted && tabMutedByUs) {
-      console.log("Unmuting tab.")
+      console.log("Unmuting tab.");
       await unmuteTab();
     } else {
       waitForSourceChange(video, () => {
-        console.log("Waiting for source change.")
+        console.log("Waiting for source change.");
         if (videoStates.get(video)?.mutedByUs) {
           video.muted = false;
           videoStates.set(video, { mutedByUs: false });

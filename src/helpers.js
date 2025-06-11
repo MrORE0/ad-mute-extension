@@ -1,7 +1,7 @@
 import { isAdDomain, isVideoAd, isAdIframe } from "./adServers.js";
 import { findAllVideos, setupVideoListeners, videoStates, videoSources, setupAdEndListeners } from "./videoUtils.js";
 import { muteTab, unmuteTab, tabMutedByUs, tabMuteReason } from "./tabMuting.js";
-import { findJWPlayerInstances, isJWPlayerAd  } from "./jwhelpers.js";
+import { findJWPlayerInstances, isJWPlayerAd } from "./jwhelpers.js";
 
 // Performance optimization: Use a throttled function for checking
 export let lastCheckTime = 0;
@@ -16,10 +16,10 @@ let jwPlayerMonitoringSetup = false;
 // Set up JW Player monitoring
 function setupJWPlayerMonitoring() {
   if (jwPlayerMonitoringSetup) return;
-  
+
   // Only proceed if JW Player is actually available
   if (typeof window.jwplayer !== "function") return;
-  
+
   jwPlayerMonitoringSetup = true;
   console.log("JW Player detected - setting up monitoring");
 
@@ -30,7 +30,7 @@ function setupJWPlayerMonitoring() {
       // Handle ad events
       player.on("adImpression", () => {
         console.log("JW Player ad started");
-         muteTab("jw-player-is-ad");
+        muteTab("jw-player-is-ad");
       });
 
       player.on("adComplete", () => {
@@ -45,10 +45,9 @@ function setupJWPlayerMonitoring() {
 
       // Check for ads when playback starts
       player.on("play", () => {
-        console.log(player + "is playing. Checking if it's an ad...")
-          muteTab("jw-player-is-ad");
+        console.log(player + "is playing. Checking if it's an ad...");
+        muteTab("jw-player-is-ad");
       });
-
     } catch (error) {
       console.log("Error setting up JW Player listeners:", error);
     }
@@ -61,15 +60,15 @@ function setupJWPlayerMonitoring() {
   };
 
   checkExistingPlayers();
-  
+
   // Check for new players periodically for a limited time
   let checkCount = 0;
   const maxChecks = 15; // Check for 30 seconds max
-  
+
   const playerCheckInterval = setInterval(() => {
     checkExistingPlayers();
     checkCount++;
-    
+
     if (checkCount >= maxChecks) {
       clearInterval(playerCheckInterval);
     }
@@ -191,7 +190,7 @@ export function checkAllVideos() {
   const jwPlayers = findJWPlayerInstances();
   jwPlayers.forEach((player) => {
     if (isJWPlayerAd(player)) {
-        muteTab("jw-player-ad-unmutable");
+      muteTab("jw-player-ad-unmutable");
     }
   });
 
@@ -202,4 +201,3 @@ export function checkAllVideos() {
     setupVideoListeners(video);
   }
 }
-

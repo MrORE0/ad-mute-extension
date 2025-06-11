@@ -113,7 +113,7 @@ async function initialize() {
   isInitialized = true;
 
   try {
-    console.log("Initializing Enhanced Ad Muter Extension");
+    console.log("Initializing Ad Muter Extension");
 
     // Set extension start time for tracking
     window._extensionStartTime = Date.now();
@@ -143,11 +143,11 @@ async function initialize() {
     // Set up periodic checks for missed elements
     setInterval(() => {
       checkAllVideos();
-    }, 5000);
+    }, 10000);
 
-    console.log("Enhanced Ad Muter initialization complete");
+    console.log("Ad Muter initialization complete");
   } catch (error) {
-    console.error("Error initializing Enhanced Ad Muter:", error);
+    console.error("Error initializing Ad Muter:", error);
     // Reset initialization flag if there was an error
     isInitialized = false;
   }
@@ -170,3 +170,4 @@ window.addEventListener("load", () => {
 
 // Export stats for debugging
 window.adMuterStats = stats;
+console.log("stats:", stats);
