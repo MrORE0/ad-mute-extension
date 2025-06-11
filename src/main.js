@@ -140,11 +140,6 @@ async function initialize() {
       });
     }
 
-    // Set up periodic checks for missed elements
-    setInterval(() => {
-      checkAllVideos();
-    }, 10000);
-
     console.log("Ad Muter initialization complete");
   } catch (error) {
     console.error("Error initializing Ad Muter:", error);
