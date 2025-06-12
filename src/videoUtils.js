@@ -13,7 +13,7 @@ async function handleVideoSourceAd(video, currentSrc) {
   try {
     video.muted = true;
     videoStates.set(video, { mutedByUs: true, reason: "video-src-ad" });
-    const tabMuted = await muteTab("video-is-ad");
+    const tabMuted = await muteTab("video-is-ad"); //needed as a variable
 
     if (tabMuted) {
       console.log("Successfully muted tab.");
@@ -113,37 +113,142 @@ export function findShadowVideos() {
   return videos;
 }
 
-function isSideContent(element){
-  const sideIndicators = [
-    'sidebar', 'aside', 'nav', 'navigation', 'menu',
-    'header', 'footer', 'advertisement', 'ad-',
-    'social', 'share', 'comment', 'related',
-    'widget', 'banner', 'promo'
+// Check if element is in main content area
+function isMainContent(element) {
+  const mainContentIndicators = [
+    'main', 'content', 'primary', 'center', 'middle',
+    'watch', 'player', 'video', 'stream', 'media',
+    'container', 'wrapper', 'body', 'article',
+    'watchingplayers', 'videoplayer', 'mediaplayer',
+    'playback', 'viewer', 'theatre', 'theater',
+    'fullscreen', 'cinema', 'embed'
   ];
 
-  const className = element.className?.toString().toLowerCase() || '';
-  const id = element.id?.toLowerCase() || '';
-  const tagName = element.tagName.toLowerCase();
+  // Check element and all its parents
+  let current = element;
+  while (current && current !== document.body) {
+    const className = current.className?.toString().toLowerCase() || '';
+    const id = current.id?.toLowerCase() || '';
+    const tagName = current.tagName.toLowerCase();
 
-  // Check for semantic HTML5 elements
-  if (['aside', 'nav', 'header', 'footer'].includes(tagName)) {
-    return true;
+    // Check for semantic main content elements
+    if (['main', 'article', 'section'].includes(tagName)) {
+      return true;
+    }
+
+    // Check for main content indicators in class names and IDs
+    const hasMainIndicator = mainContentIndicators.some(indicator => 
+      className.includes(indicator) || id.includes(indicator)
+    );
+
+    if (hasMainIndicator) {
+      console.log(`Main content detected via: ${className || id || tagName}`);
+      return true;
+    }
+
+    current = current.parentElement;
   }
 
-  // Check class names and IDs
-  return sideIndicators.some(indicator => 
-    className.includes(indicator) || id.includes(indicator)
-  );
+  return false;
 }
 
-function filterVideos(videos){
+// Check if element is side/auxiliary content
+function isSideContent(element) {
+  const sideIndicators = [
+    'sidebar', 'aside', 'nav', 'navigation', 'menu',
+    'header', 'footer', 'advertisement', 'ad-', 'ads',
+    'social', 'share', 'comment', 'related', 'recommendation',
+    'widget', 'banner', 'promo', 'adcolumn', 'adspace',
+    'thumbnail', 'preview', 'miniature', 'small',
+    'secondary', 'auxiliary', 'complementary', 'extra',
+    'sponsored', 'promoted', 'commercial', 'marketing',
+    'overlay', 'popup', 'modal', 'tooltip', 'notification',
+    'breadcrumb', 'pagination', 'filter', 'sort',
+    'tabs', 'accordion', 'carousel', 'slider',
+    'meta', 'info', 'details', 'description', 'caption',
+    'toolbar', 'controls', 'settings', 'options'
+  ];
+
+  // Check element and its immediate parents (up to 3 levels)
+  let current = element;
+  let levels = 0;
+  
+  while (current && current !== document.body && levels < 3) {
+    const className = current.className?.toString().toLowerCase() || '';
+    const id = current.id?.toLowerCase() || '';
+    const tagName = current.tagName.toLowerCase();
+
+    // Check for semantic HTML5 side content elements
+    if (['aside', 'nav', 'header', 'footer'].includes(tagName)) {
+      console.log(`Side content detected via semantic tag: ${tagName}`);
+      return true;
+    }
+
+    // Check class names and IDs for side content indicators
+    const hasSideIndicator = sideIndicators.some(indicator => 
+      className.includes(indicator) || id.includes(indicator)
+    );
+
+    if (hasSideIndicator) {
+      console.log(`Side content detected via: ${className || id || tagName}`);
+      return true;
+    }
+
+    // Check for common ad/promotional attributes
+    if (current.hasAttribute('data-ad') || 
+        current.hasAttribute('data-advertisement') ||
+        current.hasAttribute('data-sponsored')) {
+      console.log(`Side content detected via ad attributes`);
+      return true;
+    }
+
+    // Check for small video dimensions (likely thumbnails)
+    if (current.tagName === 'VIDEO') {
+      const rect = current.getBoundingClientRect();
+      if (rect.width < 200 || rect.height < 150) {
+        console.log(`Side content detected via small video dimensions: ${rect.width}x${rect.height}`);
+        return true;
+      }
+    }
+
+    current = current.parentElement;
+    levels++;
+  }
+
+  return false;
+}
+
+// Enhanced filtering that prioritizes main content
+function filterVideos(videos) {
   const videoArray = Array.from(videos);
-  const filterArray = [];
+  const mainContentVideos = [];
+  const otherVideos = [];
 
   videoArray.forEach(video => {
-    if(!isSideContent(video)) filterArray.push(video);
+    // Skip videos that are clearly side content
+    if (isSideContent(video)) {
+      console.log(`Filtering out side content video:`, video);
+      return;
+    }
+
+    // Prioritize videos in main content areas
+    if (isMainContent(video)) {
+      console.log(`Adding main content video:`, video);
+      mainContentVideos.push(video);
+    } else {
+      otherVideos.push(video);
+    }
   });
-  return filterArray;
+
+  // If we found videos in main content areas, prefer those
+  // Otherwise, include other videos that aren't side content
+  if (mainContentVideos.length > 0) {
+    console.log(`Using ${mainContentVideos.length} main content videos`);
+    return mainContentVideos;
+  } else {
+    console.log(`No main content videos found, using ${otherVideos.length} other videos`);
+    return otherVideos;
+  }
 }
 
 // Enhanced video detection that includes shadow DOM and canvas
@@ -155,20 +260,44 @@ export function findAllVideos() {
 
   // Videos in shadow DOM
   videos.push(...filterVideos(findShadowVideos()));
+  
+  // Debug overlay for filtered videos
+  for (const v of videos) {
+    const overlay = document.createElement("div");
+    overlay.style.position = "absolute";
+    overlay.style.top = 0;
+    overlay.style.left = 0;
+    overlay.style.width = "100%";
+    overlay.style.height = "100%";
+    overlay.style.backgroundColor = "rgba(255, 255, 0, 0.3)"; // translucent yellow
+    overlay.style.pointerEvents = "none";
+    overlay.style.zIndex = "9999";
 
-  // Check for canvas elements that might be rendering video
-  const canvases = document.getElementsByTagName("canvas");
-  for (const canvas of canvases) {
-    // Check if canvas has video-like properties or is in a video container
-    const parent = canvas.closest('[id*="player"], [class*="player"], [id*="video"], [class*="video"]');
-    if (parent) {
-      // This canvas might be rendering video content
-      canvas._isVideoCanvas = true;
-      videos.push(canvas);
-    }
+    v.style.position = "relative"; // ensure the video can host an overlay
+    v.parentNode.insertBefore(overlay, v.nextSibling);
   }
 
-  console.log("Amount of videos found: ", videos);
+  // Check for canvas elements that might be rendering video
+  const canvases = Array.from(document.getElementsByTagName("canvas"));
+  const filteredCanvases = canvases.filter(canvas => {
+    // Skip canvas elements in side content
+    if (isSideContent(canvas)) {
+      return false;
+    }
+
+    // Check if canvas has video-like properties or is in a video container
+    const parent = canvas.closest('[id*="player"], [class*="player"], [id*="video"], [class*="video"]');
+    if (parent && isMainContent(canvas)) {
+      // This canvas might be rendering video content in main area
+      canvas._isVideoCanvas = true;
+      return true;
+    }
+    return false;
+  });
+
+  videos.push(...filteredCanvases);
+
+  console.log(`Total videos found: ${videos.length} (after filtering)`);
   return videos;
 }
 
