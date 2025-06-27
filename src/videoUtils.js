@@ -84,6 +84,7 @@ export async function checkVideoSource(video) {
 
 // Find videos in shadow DOM
 export function findShadowVideos() {
+  console.log("Searching in ShadowDOM")
   const videos = [];
 
   function traverseShadowRoots(element) {

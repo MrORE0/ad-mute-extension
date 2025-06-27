@@ -2,6 +2,7 @@ let adDomainsCache = new Set();
 
 export async function fetchAdServersList() {
   try {
+    //TODO: cache these somewhere instead of always fething them, store until browser is quit
     const response = await fetch("https://raw.githubusercontent.com/anudeepND/blacklist/master/adservers.txt");
     const text = await response.text();
 

@@ -1,4 +1,3 @@
-
 // Cache for ad domains (if you need it later)
 let adDomainsCache = new Set();
 
@@ -54,6 +53,37 @@ browserAPI.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
+  // Inject the custom script
+    if (request.type === "injectDailymotionScript" && sender.tab) {
+      console.log("Request to inject recieved.")
+        // Get all frames in the tab
+        chrome.webNavigation.getAllFrames({tabId: sender.tab.id}, (frames) => {
+          if (chrome.runtime.lastError) {
+            console.error("Error getting frames:", chrome.runtime.lastError);
+            return;
+          }
+          console.log("Total frames found:", frames.length);
+          // Find Dailymotion frames
+          const dailymotionFrames = frames.filter(frame =>
+            frame.url.includes("geo.dailymotion.com"));
+          
+          console.log("Found Dailymotion frames:", dailymotionFrames.length);
+          
+          // Inject script into each Dailymotion frame
+          dailymotionFrames.forEach(frame => {
+            chrome.scripting.executeScript({
+              target: { 
+                tabId: sender.tab.id, 
+                frameIds: [frame.frameId] 
+              },
+              files: ['src/dailyMotionInj.js']
+            }).catch(error => {
+              console.error("Error injecting script into frame:", error);
+            });
+          });
+        });
+      }
+
   // If we get here, it means we didn’t match any of the types above
   return false;
-});
+}); 

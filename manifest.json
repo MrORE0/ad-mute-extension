@@ -5,7 +5,12 @@
   "description": "Automatically mutes video ads and falls back to tab muting when needed",
   "permissions": [
     "activeTab",
-    "tabs"
+    "tabs",
+    "scripting",
+    "webNavigation"
+  ],
+  "host_permissions": [
+    "https://geo.dailymotion.com/player/*"
   ],
   "background": {
     "service_worker": "src/background.js"
@@ -15,10 +20,21 @@
       "matches": [
         "<all_urls>"
       ],
+      "exclude_matches": [],
       "js": [
         "src/main.js"
       ],
       "run_at": "document_start"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "src/dailyMotionInj.js"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
     }
   ],
   "icons": {

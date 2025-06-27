@@ -110,10 +110,6 @@ export function findJWPlayerInstances() {
   return [...new Set(instances)];
 }
 
-
-
-
-
 function findPotentialJWPlayerContainers() {
   const containers = new Set();
   
