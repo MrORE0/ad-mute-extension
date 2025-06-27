@@ -40,6 +40,7 @@ function init() {
     console.log("Made iframe more visible:", iframe);
   }
 
+  console.log(window.dailymotion);
   window.dailymotion.getPlayer("player_embed_script_placeholder").then(player => {
     console.log("Player loaded:", player);
     console.log("State of player:", player.getState());
