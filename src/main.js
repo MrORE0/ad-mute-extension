@@ -165,9 +165,10 @@ window.addEventListener("load", () => {
     setTimeout(initialize, 500);
   } else if (isDailymotionPage) {
     console.log("Dailymotion page detected.");
-    console.log("Injecting Dailymotion script...");
+    // console.log("Injecting Dailymotion script...");
+    //
+    // // Send message to background script to inject the script
+    // chrome.runtime.sendMessage({type: "injectDailymotionScript"});
 
-    // Send message to background script to inject the script
-    chrome.runtime.sendMessage({type: "injectDailymotionScript"});
     }
 });

@@ -1,4 +1,5 @@
 function removeRedSign() {
+  player.setMute(false);
   console.log("removing sign......");
   document.getElementById("dm-ad-overlay")?.remove();
 }
@@ -26,6 +27,8 @@ function redSign() {
   overlay.textContent = "🔴 SCRIPT RUNNING!";
   document.body.appendChild(overlay);
   console.log("Big red square added - script is running");
+  player.setMute(true);
+  console.log(player);
 }
 
 function init() {
@@ -40,21 +43,24 @@ function init() {
     console.log("Made iframe more visible:", iframe);
   }
 
-  console.log(window.dailymotion);
-  window.dailymotion.getPlayer("player_embed_script_placeholder").then(player => {
-    console.log("Player loaded:", player);
-    console.log("State of player:", player.getState());
+  if (window.dailymotion){
+    window.dailymotion.getPlayer("player_embed_script_placeholder").then(p => {
+      player = p;
+      console.log("Player loaded:", player);
+      console.log("State of player:", player.getState());
+      player
 
-    // ✅ Only attach listener once
-    player.on("ad_start", redSign);
-    player.on("ad_end", removeRedSign);
+      // ✅ Only attach listener once
+      player.on("ad_start", redSign);
+      player.on("ad_end", removeRedSign);
 
-    window.addEventListener("beforeunload", () => {
-      clearInterval(adObserver);
+    }).catch(err => {
+      console.error("❌ Failed to get player:", err);
     });
-  }).catch(err => {
-    console.error("❌ Failed to get player:", err);
-  });
+  }else{
+    console.log("No window.dailymotion was found.")
+  }
 }
 
+let player;
 init();
