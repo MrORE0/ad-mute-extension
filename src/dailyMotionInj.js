@@ -1,5 +1,15 @@
-function removeRedSign() {
-  player.setMute(false);
+const clickPromise = new Promise(r => window.addEventListener('click', r, { once:true }));
+
+async function removeRedSign() {
+  // must simulate a user gesture in order to unmute
+  await clickPromise;
+  try {
+    await player.setMute(false);
+    await player.setVolume(volume ?? 0.5);
+  } catch (err) {
+    console.warn('Un-mute was blocked or failed', err);
+  }
+
   console.log("removing sign......");
   document.getElementById("dm-ad-overlay")?.remove();
 }
@@ -27,8 +37,10 @@ function redSign() {
   overlay.textContent = "🔴 SCRIPT RUNNING!";
   document.body.appendChild(overlay);
   console.log("Big red square added - script is running");
+  volume = player.playerVolume;
+  console.log("Current volume is:", volume);
   player.setMute(true);
-  console.log(player);
+  player.setVolume(0); // just in case
 }
 
 function init() {
@@ -63,4 +75,5 @@ function init() {
 }
 
 let player;
+let volume;
 init();
