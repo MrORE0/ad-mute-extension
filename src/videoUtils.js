@@ -1,5 +1,5 @@
 import { isVideoAd } from "./adServers.js";
-import { tabMutedByUs, unmuteTab, muteTab, tabMuteReason } from "./tabMuting.js";
+import { tabMutedByUs, unmuteTab, muteTab } from "./tabMuting.js";
 
 // Track videos and their current sources to detect changes
 export const videoSources = new WeakMap();
@@ -138,7 +138,7 @@ function isMainContent(element) {
     }
 
     // Check for main content indicators in class names and IDs
-    const hasMainIndicator = mainContentIndicators.some(indicator => 
+    const hasMainIndicator = mainContentIndicators.some(indicator =>
       className.includes(indicator) || id.includes(indicator)
     );
 
@@ -173,7 +173,7 @@ function isSideContent(element) {
   // Check element and its immediate parents (up to 3 levels)
   let current = element;
   let levels = 0;
-  
+
   while (current && current !== document.body && levels < 3) {
     const className = current.className?.toString().toLowerCase() || '';
     const id = current.id?.toLowerCase() || '';
@@ -186,7 +186,7 @@ function isSideContent(element) {
     }
 
     // Check class names and IDs for side content indicators
-    const hasSideIndicator = sideIndicators.some(indicator => 
+    const hasSideIndicator = sideIndicators.some(indicator =>
       className.includes(indicator) || id.includes(indicator)
     );
 
@@ -196,9 +196,9 @@ function isSideContent(element) {
     }
 
     // Check for common ad/promotional attributes
-    if (current.hasAttribute('data-ad') || 
-        current.hasAttribute('data-advertisement') ||
-        current.hasAttribute('data-sponsored')) {
+    if (current.hasAttribute('data-ad') ||
+      current.hasAttribute('data-advertisement') ||
+      current.hasAttribute('data-sponsored')) {
       console.log(`Side content detected via ad attributes`);
       return true;
     }
@@ -261,23 +261,23 @@ export function findAllVideos() {
 
   // Videos in shadow DOM
   videos.push(...filterVideos(findShadowVideos()));
-  
-  // Debug overlay for filtered videos
-  for (const v of videos) {
-    const overlay = document.createElement("div");
-    overlay.style.position = "absolute";
-    overlay.style.top = 0;
-    overlay.style.left = 0;
-    overlay.style.width = "100%";
-    overlay.style.height = "100%";
-    overlay.style.backgroundColor = "rgba(255, 255, 0, 0.3)"; // translucent yellow
-    overlay.style.backgroundColor = "rgba(255, 255, 0, 0.1)"; // translucent yellow
-    overlay.style.pointerEvents = "none";
-    overlay.style.zIndex = "9999";
 
-    v.style.position = "relative"; // ensure the video can host an overlay
-    v.parentNode.insertBefore(overlay, v.nextSibling);
-  }
+  // Debug overlay for filtered videos, uncomment if you need to check if its selecting the right videos
+  // for (const v of videos) {
+  //   const overlay = document.createElement("div");
+  //   overlay.style.position = "absolute";
+  //   overlay.style.top = 0;
+  //   overlay.style.left = 0;
+  //   overlay.style.width = "100%";
+  //   overlay.style.height = "100%";
+  //   overlay.style.backgroundColor = "rgba(255, 255, 0, 0.3)"; // translucent yellow
+  //   overlay.style.backgroundColor = "rgba(255, 255, 0, 0.1)"; // translucent yellow
+  //   overlay.style.pointerEvents = "none";
+  //   overlay.style.zIndex = "9999";
+  //
+  //   v.style.position = "relative"; // ensure the video can host an overlay
+  //   v.parentNode.insertBefore(overlay, v.nextSibling);
+  // }
 
   // Check for canvas elements that might be rendering video
   const canvases = Array.from(document.getElementsByTagName("canvas"));

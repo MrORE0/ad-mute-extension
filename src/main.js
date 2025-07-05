@@ -120,7 +120,7 @@ async function initialize() {
     // Fetch ad servers list
     await fetchAdServersList();
     setupRegularVideoDetection();
-    
+
     console.log("Ad Muter initialization complete");
   } catch (error) {
     console.error("Error initializing Ad Muter:", error);
@@ -170,5 +170,5 @@ window.addEventListener("load", () => {
     // // Send message to background script to inject the script
     // chrome.runtime.sendMessage({type: "injectDailymotionScript"});
 
-    }
+  }
 });

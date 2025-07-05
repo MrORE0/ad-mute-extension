@@ -1,25 +1,35 @@
 let adDomainsCache = new Set();
 
 export async function fetchAdServersList() {
-  try {
-    //TODO: cache these somewhere instead of always fething them, store until browser is quit
-    const response = await fetch("https://raw.githubusercontent.com/anudeepND/blacklist/master/adservers.txt");
-    const text = await response.text();
-
-    const domains = text
-      .split("\n")
-      .filter((line) => line.trim() && !line.startsWith("#"))
-      .map((line) => {
-        const parts = line.trim().split(/\s+/);
-        return parts[parts.length - 1];
-      })
-      .filter((domain) => domain && domain.includes("."));
-
-    adDomainsCache = new Set(domains);
-    console.log(`Loaded ${adDomainsCache.size} ad domains`);
-  } catch (error) {
-    console.error("Failed to fetch ad servers list:", error);
+  if (adDomainsCache.size) {
+    console.log("Already cached, fetching from there.")
+    return adDomainsCache;
   }
+
+  const { adServers } = await chrome.storage.local.get('adServers');
+  if (Array.isArray(adServers) && adServers.length) {
+    adDomainsCache = new Set(adServers);
+    console.log("Loading adservers from local");
+    return adDomainsCache;
+  }
+
+  const resp = await fetch(
+    'https://raw.githubusercontent.com/anudeepND/blacklist/master/adservers.txt'
+  );
+  const text = await resp.text();
+
+  const domains = text
+    .split('\n')
+    .filter((line) => line.trim() && !line.startsWith('#'))
+    .map((line) => line.trim().split(/\s+/).pop())
+    .filter((d) => d.includes('.'));
+
+  adDomainsCache = new Set(domains);
+
+  // store as a plain array. Chrome converts it to JSON under the hood.
+  await chrome.storage.local.set({ adServers: [...adDomainsCache] }).then(() =>
+    console.log(`Fetched ${adDomainsCache.size} ad domains (cached locally).`));
+  return adDomainsCache;
 }
 
 export function isAdDomain(hostname) {
@@ -38,6 +48,7 @@ export function isAdDomain(hostname) {
     "adroll.com",
     "amazon-adsystem.com",
     "gcdn.2mdn.net",
+    "bimg.abv.bg"
   ];
   return commonAdDomains.some((domain) => hostname.includes(domain));
 }

@@ -1,5 +1,5 @@
 import { isAd } from "./adDetection.js";
-import {muteTab, unmuteTab } from './tabMuting.js'
+import { muteTab, unmuteTab } from './tabMuting.js'
 
 function muteAdIfNeeded(video) {
   if (isAd(video)) {
@@ -10,25 +10,9 @@ function muteAdIfNeeded(video) {
   } else {
     video.muted = false;
     console.log("AD ended.")
-    unmutTab();
+    unmuteTab();
     console.log('[EXT] Content video, unmuted');
   }
-}
-
-function markVideo(v){
-    const overlay = document.createElement("div");
-    overlay.style.position = "absolute";
-    overlay.style.top = 0;
-    overlay.style.left = 0;
-    overlay.style.width = "100%";
-    overlay.style.height = "100%";
-    overlay.style.backgroundColor = "rgba(255, 255, 0, 0.3)"; // translucent yellow
-    overlay.style.backgroundColor = "rgba(255, 255, 0, 0.1)"; // translucent yellow
-    overlay.style.pointerEvents = "none";
-    overlay.style.zIndex = "9999";
-
-    v.style.position = "relative"; // ensure the video can host an overlay
-    v.parentNode.insertBefore(overlay, v.nextSibling);
 }
 
 function isMainContent(element) {
@@ -92,7 +76,6 @@ function init() {
   console.log("videos found after filtering.", videos);
   const mainVideo = videos[0];
   if (mainVideo) {
-    markVideo(mainVideo);
     muteAdIfNeeded(mainVideo);
     mainVideo.addEventListener('durationchange', () => muteAdIfNeeded(mainVideo));
     mainVideo.addEventListener('loadedmetadata', () => muteAdIfNeeded(mainVideo));
@@ -104,7 +87,7 @@ function init() {
 if (window._adMuteIframeInitialized) {
   // Already initialized in this iframe
   console.log("[EXT] iframe-muter.js already initialized, skipping.");
-}else{
+} else {
   init();
   window._adMuteIframeInitialized = true;
 }

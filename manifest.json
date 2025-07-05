@@ -7,7 +7,8 @@
     "activeTab",
     "tabs",
     "scripting",
-    "webNavigation"
+    "webNavigation",
+    "storage"
   ],
   "host_permissions": [
     "*://*.dailymotion.com/*"

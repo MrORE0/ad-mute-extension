@@ -11,14 +11,16 @@ browserAPI.runtime.onInstalled.addListener(() => {
 
 console.log("Enhanced background is running.");
 
-chrome.scripting.registerContentScripts([{
-  id: 'dailyMotionInj',
-  matches: ['*://*.dailymotion.com/*'],
-  js: ['src/dailyMotionInj.js'],
-  world: "MAIN",
-  runAt: 'document_idle'
-}]).then(scripts => console.log("Injected into the website", scripts));
-
+// register the file to be injected once on install only
+chrome.runtime.onInstalled.addListener(async () => {
+  await chrome.scripting.registerContentScripts([{
+    id: 'dailyMotionInj',
+    matches: ['*://*.dailymotion.com/*'],
+    js: ['src/dailyMotionInj.js'],
+    world: 'MAIN',
+    runAt: 'document_idle',
+  }]);
+});
 // Listen for messages from content scripts or popup
 browserAPI.runtime.onMessage.addListener((request, sender, sendResponse) => {
   //  Handle "adDetected" messages

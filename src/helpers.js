@@ -1,6 +1,6 @@
-import { isAdDomain, isVideoAd, isAdIframe } from "./adServers.js";
-import { findAllVideos, setupVideoListeners, videoStates, videoSources, setupAdEndListeners } from "./videoUtils.js";
-import { muteTab, unmuteTab, tabMutedByUs, tabMuteReason } from "./tabMuting.js";
+import { isVideoAd, isAdIframe } from "./adServers.js";
+import { findAllVideos, setupVideoListeners } from "./videoUtils.js";
+import { muteTab, unmuteTab } from "./tabMuting.js";
 import { findJWPlayerInstances, isJWPlayerAd } from "./jwhelpers.js";
 
 // Performance optimization: Use a throttled function for checking
