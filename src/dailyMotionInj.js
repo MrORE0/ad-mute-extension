@@ -24,16 +24,6 @@ function mutePlayer() {
 }
 
 function init() {
-  // Make iframes more visible with yellow background
-  // const iframes = document.getElementsByTagName("iframe");
-  // for (let i = 0; i < iframes.length; i++) {
-  //   const iframe = iframes[i];
-  //   iframe.style.backgroundColor = "yellow";
-  //   iframe.style.border = "30px solid orange";
-  //   iframe.style.opacity = "0.8";
-  //   console.log("Made iframe more visible:", iframe);
-  // }
-
   console.log("Initializing the Injector...")
   if (window.dailymotion) {
     window.dailymotion.getPlayer("player_embed_script_placeholder").then(p => {

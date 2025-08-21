@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Enhanced Ad Muter",
+  "name": "Ad Muter",
   "version": "2.0.0",
   "description": "Automatically mutes video ads and falls back to tab muting when needed",
   "permissions": [

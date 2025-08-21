@@ -48,8 +48,12 @@ export function isAdDomain(hostname) {
     "adroll.com",
     "amazon-adsystem.com",
     "gcdn.2mdn.net",
-    "bimg.abv.bg"
+    "bimg.abv.bg",
+    "r1---sn-nv47lnsr.c.2mdn.net",
+    "cdn.flashtalking.com",
+
   ];
+  console.log("Heeeeeeey ", hostname)
   return commonAdDomains.some((domain) => hostname.includes(domain));
 }
 
@@ -57,11 +61,12 @@ export function isAdDomain(hostname) {
 export function isVideoAd(video) {
   if (!video) return false;
 
+  console.log("Checking stufffffffffffffffff")
   // Handle canvas elements
   if (video.tagName === "CANVAS") {
     const parent = video.closest('[id*="player"], [class*="player"], [id*="video"], [class*="video"]');
     if (parent && (parent.innerHTML.includes("doubleclick") || parent.innerHTML.includes("googlesyndication"))) {
-      return true;
+      return isAdDomain(parser.hostname);
     }
     return false;
   }
