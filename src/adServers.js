@@ -53,7 +53,6 @@ export function isAdDomain(hostname) {
     "cdn.flashtalking.com",
 
   ];
-  console.log("Heeeeeeey ", hostname)
   return commonAdDomains.some((domain) => hostname.includes(domain));
 }
 
@@ -61,7 +60,6 @@ export function isAdDomain(hostname) {
 export function isVideoAd(video) {
   if (!video) return false;
 
-  console.log("Checking stufffffffffffffffff")
   // Handle canvas elements
   if (video.tagName === "CANVAS") {
     const parent = video.closest('[id*="player"], [class*="player"], [id*="video"], [class*="video"]');
