@@ -1,0 +1,43 @@
+Privacy Policy for Ad Muter
+
+Effective Date: August 22, 2025
+
+Ad Muter is a Chrome extension that automatically mutes ads on supported video websites like YouTube and Dailymotion. We take your privacy seriously and want to clearly explain what information we do — and do not — collect.
+
+1. Information We Do Not Collect
+
+We do not collect, store, or transmit any of the following:
+
+Personal information (name, email, etc.)
+
+Browsing history
+
+Cookies or trackers
+
+Any identifying data about you or your usage
+
+2. Permissions Explained
+
+To function correctly, Ad Muter requires certain Chrome permissions. Here’s why:
+
+activeTab / tabs: To mute and unmute audio only on the tab you’re currently watching.
+
+host permissions: To access supported video sites (like YouTube, Dailymotion).
+
+scripting & webNavigation: To detect and mute ad content as needed.
+
+storage: (Optional) May be used to save minor user preferences. No personal data is stored.
+
+3. Data Security
+
+Since no personal data is collected, there's no risk of exposure or misuse. All processing happens locally in your browser.
+
+4. Third Parties
+
+Ad Muter does not share data with any third-party services or advertisers. We are 100% independent and ad-free.
+
+5. Contact
+
+If you have questions or concerns about this policy, feel free to contact us at:
+
+📧 ad-mute@milenoff.com
